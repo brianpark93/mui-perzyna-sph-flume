@@ -1,7 +1,7 @@
 # Rate-dependent mu(I)-Perzyna SPH granular flume: five models, seven slopes
 
 **Interactive explorer:
-<https://brianpark93.github.io/rate-dependent-sph-flume/>** &mdash; play the
+<https://brianpark93.github.io/mui-perzyna-sph-flume/>** &mdash; play the
 flow, overlay the deposits, or read the whole 5x7 comparison at once.
 
 Every panel is a solved LS-DYNA SPH run of the same dry sand flume. Nothing
