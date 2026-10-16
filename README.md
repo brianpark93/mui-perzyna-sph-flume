@@ -2,10 +2,15 @@
 
 **Interactive explorer:
 <https://brianpark93.github.io/mui-perzyna-sph-flume/>** &mdash; play the
-flow, overlay the deposits, or read the whole 5x7 comparison at once.
+granular flow itself, model against model, at any of the seven slopes.
 
 Every panel is a solved LS-DYNA SPH run of the same dry sand flume. Nothing
 on the page is interpolated, fitted or predicted.
+
+The page deliberately does **one** thing. The deposits these models leave
+are already figures in the paper, and a static comparison is better typeset
+on a page than in a browser; what a figure cannot carry is the time in
+between, which is the only reason this exists.
 
 ## The question this is published for
 
@@ -55,21 +60,25 @@ Tolerances are `delta_z = 0.15 m` for the two height measures and
 is a deposit in the wrong place entirely, with the material still on the
 chute.
 
-## What the three tabs show
+## What the page shows
 
-**Flow** plays the simulation. Particles are coloured by speed; the states
-are 0.02 s apart, so 1x is half real speed. This is where the models stop
-looking alike: both Mohr-Coulomb cases shear the release into a thin fast
-sheet and leave the body of the mass behind (32 and 50 mm thick at 0.9 s,
-measured normal to the chute), while all three rate-dependent models stay
-69-106 mm thick and move as a body. Among those three, Cross and N = 1 hold
-everything above the toe and then avalanche &mdash; shedding 69-80% of the
-release in under a second &mdash; and only N = 3.71 meters the delivery out.
+Particles coloured by speed, one panel per selected model, playing in step.
+States are 0.02 s apart, so 1x is half real speed, and the dashed red line
+is the measured deposit &mdash; scrub to the end to see what each run was
+aiming at.
 
-**Deposit** overlays the final, scored particle sets at one slope against
-the measured profile.
+This is where the models stop looking alike. Both Mohr-Coulomb cases shear
+the release into a thin fast sheet and leave the body of the mass behind
+(32 and 50 mm thick at 0.9 s, measured normal to the chute), while all
+three rate-dependent models stay 69-106 mm thick and move as a body. Among
+those three, Cross and N = 1 hold everything above the toe and then
+avalanche &mdash; shedding 69-80% of the release in under a second &mdash;
+and only N = 3.71 meters the delivery out, which is what the shallow slopes
+needed.
 
-**All 35** is every model against every slope at one scale.
+Panels stack as rows where the deck is wide (30-40 deg) and run as columns
+where it is tall (45-60 deg), so the canvas is used either way. **Overlaid**
+puts every selected model in one panel instead.
 
 ## Files
 
@@ -96,7 +105,9 @@ for (let i = 0; i < c.n; i++) {
 ```
 
 These are the particles `keep_largest_cluster` retains, which is the set
-every reported score is computed on.
+every reported score is computed on. The page itself uses this file only to
+fix the drawing frame and to label each model with its score; it is here
+because it is the data behind the table above, and it is 89 KB.
 
 ### `flow_<model>.bin`
 
@@ -123,15 +134,15 @@ cases only at 30 deg, which is the angle the paper's velocity-field figure
 uses. The page greys out a model that has no dense run at the selected
 slope rather than failing.
 
-**The Flow tab and the Deposit tab are not always the same run.** The dense
-re-runs are not bit-identical to the published runs the scores come from:
+**The animation and the scores do not always come from the same run.** The
+dense re-runs are not bit-identical to the published runs the table reports:
 N = 1 re-solves through the current integrator, which reduces to that model
 at N = 1 but is not the build its search used (it averages 77.66 against the
 published 78.66, with larger per-angle scatter), and the two Mohr-Coulomb
-cases are fresh solves rather than the phi-scan entries the table reports.
-Where the final frame of a flow and the Deposit tab disagree, that is why.
-The tables keep the published values, which are what those stages actually
-achieved.
+cases are fresh solves rather than the phi-scan entries. The final frame of
+an animation can therefore sit a little off the deposit its score was
+computed on. The table keeps the published values, which are what those
+stages actually achieved.
 
 **The colour scale is set per slope.** Speed rises with the slope &mdash;
 the 99th percentile runs 1.8 m/s at 30 deg to 4.3 m/s at 60 &mdash; so one
@@ -145,9 +156,8 @@ The page keeps its state in the query string, so a view can be sent to
 someone:
 
 ```
-?mode=flow&angle=60&models=cross,perzyna1,perzynaN&t=40
-?mode=deposit&angle=35&models=mc_fixed,cross,perzynaN
-?mode=matrix
+?angle=60&models=cross,perzyna1,perzynaN&t=40
+?angle=30&models=mc_fixed,perzyna1,perzynaN&t=75&layout=overlay
 ```
 
 `t` is the frame index, not seconds (states are 0.02 s apart).
