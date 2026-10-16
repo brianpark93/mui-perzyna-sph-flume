@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rate-dependent SPH granular flume &mdash; model explorer</title>
+<!-- Deliberately pure ASCII, with HTML entities for every symbol. These files
+     live on a Windows machine where a stray PowerShell rewrite once replaced
+     every non-ASCII character with a question mark; entities cannot be
+     corrupted that way. Same rule as the companion grid explorer. -->
+<style>
+  :root{
+    --ink:#1d1d1f; --muted:#6e6e73; --line:#d2d2d7;
+    --bg:#fbfbfd; --panel:#fff; --fill:#f5f5f7; --accent:#0071e3;
+    --struct:#c8c8cc; --grid:#e8e8ed;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:17px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text",
+            "Segoe UI",Roboto,Helvetica,Arial,sans-serif;letter-spacing:-.01em}
+  .page{max-width:1180px;margin:0 auto;padding:56px 22px 88px}
+  h1{font-size:40px;line-height:1.1;margin:0 0 10px;font-weight:600;
+     letter-spacing:-.022em}
+  .sub{color:var(--muted);font-size:19px;line-height:1.45;margin:0 0 30px;
+       letter-spacing:-.012em}
+  .sub a{color:var(--accent);text-decoration:none}
+  .sub a:hover{text-decoration:underline}
+  .card{background:var(--panel);border-radius:18px;
+        box-shadow:0 1px 2px rgba(0,0,0,.05), 0 10px 30px rgba(0,0,0,.05)}
+  .stage{padding:16px 18px 14px;margin-bottom:22px}
+  canvas{width:100%;display:block}
+  .pad{padding:22px 24px}
+  .layout{display:grid;grid-template-columns:1fr .62fr;gap:22px;
+          align-items:start}
+  @media (max-width:900px){.layout{grid-template-columns:1fr}}
+  h2{font-size:12px;text-transform:uppercase;letter-spacing:.07em;
+     color:var(--muted);margin:0 0 16px;font-weight:590}
+  .row{margin-bottom:20px}
+  .row:last-child{margin-bottom:4px}
+
+  .modes{display:inline-flex;gap:2px;margin:0 0 24px;padding:3px;
+         background:var(--fill);border-radius:980px}
+  .modes button{border:0;border-radius:980px;padding:9px 20px;font-size:15px;
+                font-weight:450;color:var(--ink);background:transparent;
+                letter-spacing:-.01em;cursor:pointer;
+                transition:background .18s,box-shadow .18s}
+  .modes button:hover{background:rgba(0,0,0,.04)}
+  .modes button.active{background:#fff;color:var(--ink);font-weight:520;
+                       box-shadow:0 1px 3px rgba(0,0,0,.10)}
+  .modes button.active:hover{background:#fff}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:980px;
+        padding:7px 14px;font-size:14px;cursor:pointer;color:var(--ink);
+        font-variant-numeric:tabular-nums;transition:all .15s}
+  .chip:hover{border-color:#b0b0b6}
+  .chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+
+  .mlist{display:flex;flex-direction:column;gap:7px}
+  .m{display:flex;align-items:center;gap:10px;padding:8px 11px;
+     border:1px solid var(--line);border-radius:11px;cursor:pointer;
+     font-size:14.5px;transition:all .15s;background:#fff}
+  .m:hover{border-color:#b0b0b6}
+  .m.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+  .m.off{opacity:.42;cursor:not-allowed}
+  .m .sw{width:13px;height:13px;border-radius:4px;flex:0 0 auto;
+         border:.5px solid rgba(0,0,0,.18)}
+  .m .nm{flex:1 1 auto}
+  .m .sc{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+  .m.on .sc{color:var(--ink);font-weight:590}
+
+  .transport{display:flex;align-items:center;gap:14px;margin-top:12px}
+  .play{border:0;background:var(--ink);color:#fff;border-radius:980px;
+        width:44px;height:44px;font-size:14px;cursor:pointer;flex:0 0 auto}
+  .play:hover{background:#000}
+  .clock{font-variant-numeric:tabular-nums;font-size:15px;font-weight:590;
+         min-width:80px;text-align:right}
+  .clock small{color:var(--muted);font-weight:400}
+  input[type=range]{-webkit-appearance:none;appearance:none;flex:1 1 auto;
+                    background:transparent;margin:0;height:22px;min-width:60px}
+  input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;
+                    background:var(--grid)}
+  input[type=range]::-moz-range-track{height:4px;border-radius:2px;
+                    background:var(--grid)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+                    width:20px;height:20px;border-radius:50%;background:#fff;
+                    margin-top:-8px;border:.5px solid rgba(0,0,0,.08);
+                    box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;
+                    background:#fff;border:.5px solid rgba(0,0,0,.08);
+                    box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer}
+
+  .note{font-size:13.5px;line-height:1.5;color:var(--muted);margin:0 0 14px}
+  .note b{color:var(--ink);font-weight:590}
+  .bar{height:12px;border-radius:3px;margin:8px 0 4px;
+       background:linear-gradient(90deg,#440154,#414487,#2a788e,#22a884,#7ad151,#fde725)}
+  .barlab{display:flex;justify-content:space-between;font-size:12.5px;
+          color:var(--muted);font-variant-numeric:tabular-nums;margin-bottom:16px}
+  .hint{font-size:13.5px;color:var(--muted);margin:10px 0 0}
+  .busy{padding:40px 0;text-align:center;color:var(--muted);font-size:15px}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Rate-dependent &mu;(I)&ndash;Perzyna SPH granular flume</h1>
+  <p class="sub">Five constitutive models, seven slope angles, one dry sand
+  flume. Play the flow, overlay the deposits, or read the whole 5&times;7
+  comparison at once. Everything here is a solved LS-DYNA SPH run &mdash;
+  nothing is interpolated or predicted.</p>
+  <div class="modes" id="modes"></div>
+  <div id="app"><div class="busy">Loading&hellip;</div></div>
+</div>
+<script>
+"use strict";
+
+/* ---------- viridis, the scale the figures use ---------- */
+var VIR = [[68,1,84],[72,36,117],[65,68,135],[53,95,141],[42,120,142],
+           [33,145,140],[34,168,132],[68,191,112],[122,209,81],[189,223,38],
+           [253,231,37]];
+function vir(t){
+  t = t < 0 ? 0 : (t > 1 ? 1 : t);
+  var f = t * (VIR.length - 1), i = Math.floor(f), g = f - i;
+  if (i >= VIR.length - 1){ i = VIR.length - 2; g = 1; }
+  var a = VIR[i], b = VIR[i+1];
+  return "rgb(" + Math.round(a[0]+(b[0]-a[0])*g) + ","
+                + Math.round(a[1]+(b[1]-a[1])*g) + ","
+                + Math.round(a[2]+(b[2]-a[2])*g) + ")";
+}
+
+var D = null, MODE = "flow", ANGLE = 30, LAYOUT = "stack";
+var SEL = {}, FLOW = {}, LOADING = {}, DEP = null, BOX = {};
+var frame = 0, playing = false, rate = 1, lastT = 0, acc = 0;
+
+function el(tag, cls, html){
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html !== undefined) e.innerHTML = html;
+  return e;
+}
+function model(k){
+  for (var i = 0; i < D.models.length; i++)
+    if (D.models[i].key === k) return D.models[i];
+  return null;
+}
+function hasFlow(k, a){ return !!(D.flow[k] && D.flow[k][String(a)]); }
+function selected(){
+  return D.models.map(function(m){ return m.key; })
+                 .filter(function(k){ return SEL[k]; });
+}
+function flowKeys(){
+  return selected().filter(function(k){ return hasFlow(k, ANGLE) && FLOW[k]; });
+}
+function nFrames(){
+  var n = 0, ks = flowKeys();
+  for (var i = 0; i < ks.length; i++)
+    n = Math.max(n, D.flow[ks[i]][String(ANGLE)].nt);
+  return n || 1;
+}
+/* Speed rises with the slope -- p99 is 1.8 m/s at 30 deg and 4.3 at 60 --
+   so one scale for the whole page would saturate every steep panel. Each
+   slope has its own; within a slope every model shares it, which is the
+   comparison this page is for. The colourbar carries the number. */
+function vmax(){
+  var v = D.vmax_by_angle && D.vmax_by_angle[String(ANGLE)];
+  return v || D.vmax;
+}
+function stepDt(){
+  var ks = flowKeys();
+  return ks.length ? D.flow[ks[0]][String(ANGLE)].dt : 0.02;
+}
+
+/* ---------- data ---------- */
+function loadDeposits(){
+  if (DEP) return Promise.resolve();
+  return fetch("deposits.bin").then(function(r){ return r.arrayBuffer(); })
+    .then(function(b){ DEP = new Int16Array(b); });
+}
+function loadFlow(k){
+  if (FLOW[k]) return Promise.resolve();
+  if (LOADING[k]) return LOADING[k];
+  LOADING[k] = fetch("flow_" + k + ".bin")
+    .then(function(r){ return r.arrayBuffer(); })
+    .then(function(b){ FLOW[k] = new Int16Array(b); delete LOADING[k]; })
+    .catch(function(){ delete LOADING[k]; });
+  return LOADING[k];
+}
+function depositXZ(k, a){
+  var m = D.deposits[k][String(a)], x = [], z = [];
+  for (var i = 0; i < m.n; i++){
+    x.push(DEP[(m.o + i) * 2] / 1000);
+    z.push(DEP[(m.o + i) * 2 + 1] / 1000);
+  }
+  return {x:x, z:z, score:m.score};
+}
+
+/* ---------- world frame ----------
+   The chute, the measured profile and every deposit at this slope. The floor
+   runs to x = 1.99 m but no deposit gets near it, so the floor is clipped to
+   the box rather than allowed to set it -- otherwise half the panel is empty
+   plate. Cached per slope so the frame does not jump as models are toggled. */
+function worldBox(a){
+  var key = String(a);
+  if (BOX[key]) return BOX[key];
+  if (!DEP) return {x0:-2.2, x1:1.0, z0:-0.06, z1:1.4};
+  var g = D.geom[key], s = g[0];
+  var x0 = Math.min(s[0][0], s[0][1]), x1 = Math.max(s[0][0], s[0][1]);
+  var z0 = Math.min(s[1][0], s[1][1], g[1][1][0]);
+  var z1 = Math.max(s[1][0], s[1][1]);
+  var e = D.exp[key], i;
+  for (i = 0; i < e.length; i++){
+    x0 = Math.min(x0, e[i][0]); x1 = Math.max(x1, e[i][0]);
+    z0 = Math.min(z0, e[i][1]); z1 = Math.max(z1, e[i][1]);
+  }
+  for (var mi = 0; mi < D.models.length; mi++){
+    var d = depositXZ(D.models[mi].key, a);
+    for (i = 0; i < d.x.length; i++){
+      if (d.x[i] < x0) x0 = d.x[i];
+      if (d.x[i] > x1) x1 = d.x[i];
+      if (d.z[i] < z0) z0 = d.z[i];
+      if (d.z[i] > z1) z1 = d.z[i];
+    }
+  }
+  var mx = (x1 - x0) * 0.035, mz = (z1 - z0) * 0.06;
+  BOX[key] = {x0:x0-mx, x1:x1+mx, z0:z0-mz, z1:z1+mz};
+  return BOX[key];
+}
+function unionBox(){
+  var b = null;
+  for (var i = 0; i < D.angles.length; i++){
+    var c = worldBox(D.angles[i]);
+    b = b ? {x0:Math.min(b.x0,c.x0), x1:Math.max(b.x1,c.x1),
+             z0:Math.min(b.z0,c.z0), z1:Math.max(b.z1,c.z1)} : c;
+  }
+  return b;
+}
+function mkProj(box, X, Y, W, H){
+  var s = Math.min(W / (box.x1 - box.x0), H / (box.z1 - box.z0));
+  var ox = X + (W - s * (box.x1 - box.x0)) / 2;
+  var oy = Y + (H - s * (box.z1 - box.z0)) / 2;
+  return { x:function(v){ return ox + (v - box.x0) * s; },
+           y:function(v){ return oy + s * (box.z1 - v); }, s:s };
+}
+
+/* ---------- drawing primitives ---------- */
+function drawDeck(ctx, pr, box){
+  var g = D.geom[String(ANGLE)];
+  ctx.save();
+  ctx.strokeStyle = "#c8c8cc"; ctx.lineWidth = 3; ctx.lineCap = "round";
+  for (var i = 0; i < g.length; i++){
+    var xa = g[i][0][0], xb = g[i][0][1], za = g[i][1][0], zb = g[i][1][1];
+    /* clip the floor to the frame instead of letting it set it */
+    if (xb > box.x1){
+      var f = (box.x1 - xa) / (xb - xa);
+      if (f > 0 && f < 1){ zb = za + (zb - za) * f; xb = box.x1; }
+    }
+    ctx.beginPath();
+    ctx.moveTo(pr.x(xa), pr.y(za));
+    ctx.lineTo(pr.x(xb), pr.y(zb));
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawExp(ctx, pr, a){
+  var e = D.exp[String(a)];
+  ctx.save();
+  ctx.strokeStyle = "#b64342"; ctx.lineWidth = 2; ctx.setLineDash([6,4]);
+  ctx.beginPath();
+  for (var i = 0; i < e.length; i++){
+    var X = pr.x(e[i][0]), Y = pr.y(e[i][1]);
+    if (i) ctx.lineTo(X, Y); else ctx.moveTo(X, Y);
+  }
+  ctx.stroke(); ctx.restore();
+}
+function tag(ctx, txt, x, y, col, size){
+  ctx.save();
+  ctx.font = "600 " + (size || 13) + "px -apple-system,Segoe UI,Roboto,sans-serif";
+  ctx.fillStyle = col || "#1d1d1f";
+  ctx.textBaseline = "top"; ctx.textAlign = "left";
+  ctx.fillText(txt, x, y);
+  ctx.restore();
+}
+function fitCanvas(cv, W, H){
+  var dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  cv.style.height = H + "px";
+  var ctx = cv.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  return ctx;
+}
+function plain(s){ return String(s).replace(/&mu;/g,"u").replace(/&ndash;/g,"-")
+                     .replace(/&phi;/g,"phi").replace(/&deg;/g," deg"); }
+
+/* ---------- flow ---------- */
+function renderFlow(){
+  var cv = document.getElementById("cv");
+  if (!cv) return;
+  var keys = flowKeys(), W = cv.clientWidth;
+  var box = worldBox(ANGLE);
+  var aspect = (box.x1 - box.x0) / (box.z1 - box.z0);
+  if (!keys.length){
+    var c0 = fitCanvas(cv, W, 200);
+    c0.fillStyle = "#6e6e73";
+    c0.font = "15px -apple-system,Segoe UI,Roboto,sans-serif";
+    c0.textAlign = "center";
+    c0.fillText("No model with a dense re-run is selected at "
+                + ANGLE + " deg.", W/2, 100);
+    return;
+  }
+  var over = (LAYOUT === "overlay");
+  var n = over ? 1 : keys.length;
+  /* A 30 deg deck is twice as wide as it is tall and a 60 deg deck is
+     taller than wide. Stacking rows suits the first and wastes most of the
+     canvas on the second, so the panels run in a row once the deck stops
+     being wide. */
+  var cols = (!over && aspect < 1.45) ? n : 1;
+  var rows = Math.ceil(n / cols);
+  var GAPX = 8, GAPY = 8;
+  var pw = (W - (cols - 1) * GAPX) / cols;
+  var budget = over ? 460 : 900;
+  var panelH = Math.max(120, Math.min(pw / aspect, budget / rows));
+  var H = rows * panelH + (rows - 1) * GAPY;
+  var ctx = fitCanvas(cv, W, H);
+
+  function one(k, X, Y, w, h, solo){
+    var pr = mkProj(box, X, Y, w, h);
+    if (solo) drawDeck(ctx, pr, box);
+    var m = D.flow[k][String(ANGLE)], P = FLOW[k];
+    var f = Math.min(frame, m.nt - 1);
+    var base = (m.o + f * m.np) * 2;
+    var sb = m.so * 2 + m.o + f * m.np;
+    var r = Math.max(1.3, pr.s * 0.0052), VM = vmax();
+    for (var i = 0; i < m.np; i++){
+      ctx.fillStyle = vir((P[sb + i] / 1000) / VM);
+      ctx.beginPath();
+      ctx.arc(pr.x(P[base + i*2] / 1000), pr.y(P[base + i*2 + 1] / 1000),
+              r, 0, 6.2832);
+      ctx.fill();
+    }
+    if (solo) tag(ctx, plain(model(k).short), X + 6, Y + 5);
+  }
+
+  if (over){
+    drawDeck(ctx, mkProj(box, 0, 0, W, panelH), box);
+    for (var i = 0; i < keys.length; i++) one(keys[i], 0, 0, W, panelH, false);
+    var lx = 6;
+    ctx.font = "600 13px -apple-system,Segoe UI,Roboto,sans-serif";
+    for (var j = 0; j < keys.length; j++){
+      var t = plain(model(keys[j]).short);
+      tag(ctx, t, lx, 5, model(keys[j]).colour);
+      lx += ctx.measureText(t).width + 42;
+    }
+  } else {
+    for (var q = 0; q < keys.length; q++){
+      var cc = q % cols, rr = Math.floor(q / cols);
+      one(keys[q], cc * (pw + GAPX), rr * (panelH + GAPY), pw, panelH, true);
+    }
+  }
+}
+
+/* ---------- deposit ---------- */
+function renderDeposit(){
+  var cv = document.getElementById("cv");
+  if (!cv || !DEP) return;
+  var keys = selected(), W = cv.clientWidth;
+  var box = worldBox(ANGLE);
+  var H = Math.max(170, Math.min(W * (box.z1-box.z0)/(box.x1-box.x0), 460));
+  var ctx = fitCanvas(cv, W, H);
+  var pr = mkProj(box, 0, 0, W, H);
+  drawDeck(ctx, pr, box);
+  for (var i = 0; i < keys.length; i++){
+    var d = depositXZ(keys[i], ANGLE);
+    ctx.fillStyle = model(keys[i]).colour;
+    ctx.globalAlpha = keys.length > 1 ? 0.70 : 1;
+    var r = Math.max(1.2, pr.s * 0.0048);
+    for (var p = 0; p < d.x.length; p++){
+      ctx.beginPath(); ctx.arc(pr.x(d.x[p]), pr.y(d.z[p]), r, 0, 6.2832);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  drawExp(ctx, pr, ANGLE);
+  tag(ctx, ANGLE + " deg", 6, 5, "#6e6e73");
+}
+
+/* ---------- all 35 ---------- */
+function renderMatrix(){
+  var cv = document.getElementById("cv");
+  if (!cv || !DEP) return;
+  var W = cv.clientWidth;
+  var cols = D.models.length, rows = D.angles.length;
+  var LEFT = 38, TOP = 24, GAP = 5;
+  var cw = (W - LEFT - (cols - 1) * GAP) / cols;
+  /* Cropped to where the comparison happens, not to the whole deck. The
+     measured profiles live in x -0.06..0.71 and z -0.03..0.21, about a
+     fifth of the deck's area; drawn full-deck, every deposit is a smear in
+     one corner. The frame is widened to 0.95 m so the Cross model's
+     over-run toe (0.892 m) stays inside, which the printed figure cannot
+     afford. Material standing up the chute leaves the panel at the left --
+     at 30 deg under a fixed friction angle, and under the power law. */
+  var box = {x0:-0.09, x1:0.95, z0:-0.035, z1:0.215};
+  var ch = cw * (box.z1 - box.z0) / (box.x1 - box.x0);
+  var H = TOP + rows * ch + (rows - 1) * GAP;
+  var ctx = fitCanvas(cv, W, H);
+  var save = ANGLE, c, r;
+
+  for (c = 0; c < cols; c++){
+    var m = D.models[c], X = LEFT + c * (cw + GAP);
+    ctx.fillStyle = m.colour;
+    ctx.fillRect(X, 1, cw, 17);
+    ctx.save();
+    ctx.font = "600 11px -apple-system,Segoe UI,Roboto,sans-serif";
+    ctx.fillStyle = "#1d1d1f";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(plain(m.short), X + cw/2, 10);
+    ctx.restore();
+  }
+  for (r = 0; r < rows; r++){
+    ANGLE = D.angles[r];
+    var Y = TOP + r * (ch + GAP);
+    ctx.save();
+    ctx.font = "11px -apple-system,Segoe UI,Roboto,sans-serif";
+    ctx.fillStyle = "#6e6e73";
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    ctx.fillText(D.angles[r] + " deg", LEFT - 7, Y + ch/2);
+    ctx.restore();
+    for (c = 0; c < cols; c++){
+      var k = D.models[c].key, X2 = LEFT + c * (cw + GAP);
+      var pr = mkProj(box, X2, Y, cw, ch);
+      ctx.fillStyle = "#fafafc";
+      ctx.fillRect(X2, Y, cw, ch);
+      ctx.save();
+      ctx.beginPath(); ctx.rect(X2, Y, cw, ch); ctx.clip();
+      drawDeck(ctx, pr, box);
+      var d = depositXZ(k, D.angles[r]);
+      ctx.fillStyle = D.models[c].colour;
+      var rr = Math.max(0.8, pr.s * 0.0045);
+      for (var p = 0; p < d.x.length; p++){
+        ctx.beginPath(); ctx.arc(pr.x(d.x[p]), pr.y(d.z[p]), rr, 0, 6.2832);
+        ctx.fill();
+      }
+      drawExp(ctx, pr, D.angles[r]);
+      ctx.restore();
+      ctx.save();
+      ctx.font = "600 10px -apple-system,Segoe UI,Roboto,sans-serif";
+      ctx.fillStyle = "#1d1d1f";
+      ctx.textAlign = "right"; ctx.textBaseline = "top";
+      ctx.fillText(d.score.toFixed(1), X2 + cw - 4, Y + 3);
+      ctx.restore();
+    }
+  }
+  ANGLE = save;
+}
+
+function render(){
+  if (MODE === "flow") renderFlow();
+  else if (MODE === "deposit") renderDeposit();
+  else renderMatrix();
+  if (MODE === "flow"){
+    var c = document.getElementById("clock");
+    if (c) c.innerHTML = (frame * stepDt()).toFixed(2) + " <small>s</small>";
+    var sl = document.getElementById("scrub");
+    if (sl && document.activeElement !== sl){
+      sl.max = nFrames() - 1; sl.value = frame;
+    }
+  }
+}
+
+/* ---------- animation ---------- */
+function tick(ts){
+  if (playing && MODE === "flow"){
+    if (!lastT) lastT = ts;
+    acc += (ts - lastT) * rate; lastT = ts;
+    var step = 1000 / 50;              /* states are 0.02 s apart */
+    var moved = false;
+    while (acc >= step){
+      acc -= step; frame++; moved = true;
+      if (frame >= nFrames()) frame = 0;
+    }
+    if (moved) render();
+  } else { lastT = 0; acc = 0; }
+  requestAnimationFrame(tick);
+}
+
+/* ---------- url state ----------
+   A comparison is worth sending to someone, so the page carries its own
+   state in the query string: ?mode=flow&angle=45&models=cross,perzynaN&t=38
+   The reader lands on exactly what was being looked at. */
+function readURL(){
+  var q = new URLSearchParams(location.search);
+  var m = q.get("mode");
+  if (m === "flow" || m === "deposit" || m === "matrix") MODE = m;
+  var a = parseInt(q.get("angle"), 10);
+  if (D.angles.indexOf(a) >= 0) ANGLE = a;
+  var ms = q.get("models");
+  if (ms){
+    D.models.forEach(function(x){ SEL[x.key] = false; });
+    ms.split(",").forEach(function(k){ if (model(k)) SEL[k] = true; });
+  }
+  if (q.get("layout") === "overlay") LAYOUT = "overlay";
+  var f = parseInt(q.get("t"), 10);
+  if (!isNaN(f) && f >= 0) frame = f;
+}
+function writeURL(){
+  var q = new URLSearchParams();
+  q.set("mode", MODE);
+  if (MODE !== "matrix"){
+    q.set("angle", ANGLE);
+    var ks = selected();
+    if (ks.length) q.set("models", ks.join(","));
+  }
+  if (MODE === "flow"){
+    if (LAYOUT === "overlay") q.set("layout", "overlay");
+    if (frame) q.set("t", frame);
+  }
+  history.replaceState(null, "", location.pathname + "?" + q.toString());
+}
+
+/* ---------- ui ---------- */
+function ensureData(){
+  var jobs = [loadDeposits()];
+  if (MODE === "flow")
+    selected().forEach(function(k){
+      if (hasFlow(k, ANGLE)) jobs.push(loadFlow(k));
+    });
+  return Promise.all(jobs);
+}
+
+function build(){
+  var app = document.getElementById("app");
+  app.innerHTML = "";
+
+  var stage = el("div", "card stage");
+  var cv = el("canvas"); cv.id = "cv";
+  stage.appendChild(cv);
+
+  if (MODE === "flow"){
+    var tr = el("div", "transport");
+    var pb = el("button", "play", playing ? "&#10073;&#10073;" : "&#9654;");
+    pb.title = playing ? "Pause" : "Play";
+    pb.onclick = function(){ playing = !playing; lastT = 0; build(); };
+    var sc = el("input"); sc.type = "range"; sc.id = "scrub";
+    sc.min = 0; sc.max = Math.max(1, nFrames() - 1); sc.value = frame; sc.step = 1;
+    sc.oninput = function(){ frame = +sc.value; playing = false; render(); };
+    sc.onchange = writeURL;
+    var ck = el("div", "clock"); ck.id = "clock";
+    var rs = el("div", "chips");
+    [0.25, 0.5, 1].forEach(function(v){
+      var b = el("button", "chip" + (rate === v ? " on" : ""), v + "&times;");
+      b.onclick = function(){ rate = v; build(); };
+      rs.appendChild(b);
+    });
+    tr.appendChild(pb); tr.appendChild(sc); tr.appendChild(ck); tr.appendChild(rs);
+    stage.appendChild(tr);
+  }
+  app.appendChild(stage);
+
+  var lay = el("div", "layout");
+  var left = el("div", "card pad");
+  var right = el("div", "card pad");
+
+  var r1 = el("div", "row");
+  if (MODE !== "matrix"){
+    r1.appendChild(el("h2", null, "Slope angle"));
+    var ch = el("div", "chips");
+    D.angles.forEach(function(a){
+      var b = el("button", "chip" + (a === ANGLE ? " on" : ""), a + "&deg;");
+      b.onclick = function(){
+        ANGLE = a; frame = 0;
+        ensureData().then(build);
+      };
+      ch.appendChild(b);
+    });
+    r1.appendChild(ch);
+  } else {
+    r1.appendChild(el("h2", null, "All seven slopes"));
+    r1.appendChild(el("p", "hint",
+      "Every model against every slope: all 35 solved runs, at one scale. "
+      + "The number on a panel is its composite score."));
+  }
+  left.appendChild(r1);
+
+  var r2 = el("div", "row");
+  r2.appendChild(el("h2", null, MODE === "matrix" ? "Colour key" : "Models"));
+  var ml = el("div", "mlist");
+  D.models.forEach(function(m){
+    var ok = (MODE !== "flow") || hasFlow(m.key, ANGLE);
+    var on = !!SEL[m.key] && ok;
+    var d = el("div", "m" + (on ? " on" : "") + (ok ? "" : " off"));
+    var sw = el("div", "sw"); sw.style.background = m.colour;
+    d.appendChild(sw);
+    d.appendChild(el("div", "nm", m.label));
+    if (MODE !== "matrix")
+      d.appendChild(el("div", "sc",
+        D.deposits[m.key][String(ANGLE)].score.toFixed(1)));
+    if (MODE !== "matrix" && ok)
+      d.onclick = function(){ SEL[m.key] = !SEL[m.key]; ensureData().then(build); };
+    ml.appendChild(d);
+  });
+  r2.appendChild(ml);
+  if (MODE === "flow"){
+    r2.appendChild(el("p", "hint",
+      "Greyed rows have no dense re-run at this slope. The two "
+      + "Mohr&ndash;Coulomb cases were re-solved at 30&deg; only &mdash; "
+      + "the angle the paper's velocity-field figure uses."));
+    r2.appendChild(el("p", "hint",
+      "These dense re-runs are not always bit-identical to the published "
+      + "run the <b>Deposit</b> tab and the scores come from: N = 1 "
+      + "re-solves through the current integrator, which reduces to that "
+      + "model but was not the build its search used, and the two "
+      + "Mohr&ndash;Coulomb cases are fresh solves rather than the "
+      + "&phi;-scan entries. Where the final frame here and the Deposit tab "
+      + "disagree, that is the reason, and the paper reports it."));
+  } else if (MODE === "deposit")
+    r2.appendChild(el("p", "hint",
+      "The number is that cell's composite score. Select more than one to "
+      + "overlay them."));
+  left.appendChild(r2);
+
+  if (MODE === "flow"){
+    var r3 = el("div", "row");
+    r3.appendChild(el("h2", null, "Layout"));
+    var lc = el("div", "chips");
+    [["stack","One row each"],["overlay","Overlaid"]].forEach(function(p){
+      var b = el("button", "chip" + (LAYOUT === p[0] ? " on" : ""), p[1]);
+      b.onclick = function(){ LAYOUT = p[0]; build(); };
+      lc.appendChild(b);
+    });
+    r3.appendChild(lc);
+    left.appendChild(r3);
+  }
+
+  if (MODE === "flow"){
+    right.appendChild(el("h2", null, "Particle speed"));
+    right.appendChild(el("div", "bar"));
+    var bl = el("div", "barlab");
+    bl.appendChild(el("span", null, "0"));
+    bl.appendChild(el("span", null, vmax().toFixed(2) + " m/s"));
+    right.appendChild(bl);
+    right.appendChild(el("p", "note",
+      "<b>What to look for.</b> Both Mohr&ndash;Coulomb cases shear the "
+      + "release into a thin fast sheet and leave the body of the mass "
+      + "behind. All three rate-dependent models keep it thick. Among those, "
+      + "Cross and N = 1 hold everything above the toe and then avalanche; "
+      + "only N = 3.71 meters the delivery out, which is what the shallow "
+      + "slopes needed."));
+    right.appendChild(el("p", "note",
+      "States are <b>0.02 s</b> apart, so 1&times; plays at half real speed."));
+    right.appendChild(el("p", "note",
+      "The colour scale is <b>set per slope</b> &mdash; steeper chutes flow "
+      + "faster, and one scale for all seven would saturate every steep "
+      + "panel. Models at the same slope always share it, so compare "
+      + "colours across models freely, but read the number above before "
+      + "comparing them across slopes."));
+  } else if (MODE === "deposit"){
+    right.appendChild(el("h2", null, "Reading this"));
+    right.appendChild(el("p", "note",
+      "Each deposit is the final, scored particle set &mdash; the same one "
+      + "every number in the paper is computed on. Dashed red is the "
+      + "measured profile."));
+    right.appendChild(el("p", "note",
+      "<b>100</b> would be an exact reproduction of that profile. The "
+      + "practical ceiling is <b>89.2</b>, which is what Mohr&ndash;Coulomb "
+      + "reaches when every slope is allowed its own friction angle &mdash; "
+      + "seven free parameters against this model's five."));
+  } else {
+    right.appendChild(el("h2", null, "Reading this"));
+    right.appendChild(el("p", "note",
+      "<b>Down a column</b> is one model across the slope range; "
+      + "<b>across a row</b> is every model at one slope."));
+    right.appendChild(el("p", "note",
+      "Each failure has a signature. Cross spreads into a flat sheet below "
+      + "45&deg;; linear overstress leaves the shallow chutes loaded; a "
+      + "fixed friction angle arrests at 30&deg; and overruns at "
+      + "55&ndash;60&deg;. The power law never collapses &mdash; it wins "
+      + "outright at one slope of seven, and that is the point: adequate "
+      + "everywhere on one parameter set, rather than best anywhere."));
+  }
+
+  lay.appendChild(left); lay.appendChild(right);
+  app.appendChild(lay);
+  writeURL();
+  render();
+}
+
+function buildModes(){
+  var m = document.getElementById("modes");
+  m.innerHTML = "";
+  [["flow","Flow"],["deposit","Deposit"],["matrix","All 35"]].forEach(function(p){
+    var b = el("button", MODE === p[0] ? "active" : "", p[1]);
+    b.onclick = function(){
+      MODE = p[0]; playing = false;
+      buildModes();
+      ensureData().then(build);
+    };
+    m.appendChild(b);
+  });
+}
+
+fetch("index.json").then(function(r){ return r.json(); }).then(function(d){
+  D = d;
+  D.models.forEach(function(m){ SEL[m.key] = false; });
+  SEL.perzyna1 = true; SEL.perzynaN = true;
+  readURL();
+  buildModes();
+  return ensureData();
+}).then(function(){
+  build();
+  requestAnimationFrame(tick);
+  var t = null;
+  window.addEventListener("resize", function(){
+    clearTimeout(t); t = setTimeout(render, 120);
+  });
+}).catch(function(e){
+  document.getElementById("app").innerHTML =
+    '<div class="busy">Could not load the data files.<br>' + e + "</div>";
+});
+</script>
+</body>
+</html>
