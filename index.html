@@ -103,7 +103,7 @@
 </head>
 <body>
 <div class="page">
-  <h1>Rate-dependent &mu;(I)&ndash;Perzyna SPH granular flume</h1>
+  <h1>Rate-dependent Drucker&ndash;Prager&ndash;Perzyna SPH granular flume</h1>
   <p class="sub">Play the granular flow itself: five constitutive models
   across seven slope angles, as solved LS-DYNA SPH runs. The deposits each
   one leaves are in the paper; what a page can show and a figure cannot is
@@ -160,7 +160,7 @@ function nFrames(){
 /* Speed rises with the slope -- p99 is 1.8 m/s at 30 deg and 4.3 at 60 --
    so one scale for the whole page would saturate every steep panel. Each
    slope has its own; within a slope every model shares it, which is the
-   comparison this page is for. The colourbar carries the number. */
+   comparison this page is for. The color bar carries the number. */
 function vmax(){
   var v = D.vmax_by_angle && D.vmax_by_angle[String(ANGLE)];
   return v || D.vmax;
@@ -482,7 +482,8 @@ function build(){
     "Greyed rows have no dense re-run at this slope. The two "
     + "Mohr&ndash;Coulomb cases were re-solved at 30&deg; only &mdash; "
     + "the angle the paper's velocity-field figure uses. The number is "
-    + "that model's composite score at this slope."));
+    + "that model's score at this slope: the mean of three measures of the "
+    + "final deposit, 100 being an exact reproduction."));
   left.appendChild(r2);
 
   var r3 = el("div", "row");
@@ -505,18 +506,20 @@ function build(){
   right.appendChild(el("p", "note",
     "<b>What to look for.</b> Both Mohr&ndash;Coulomb cases shear the "
     + "release into a thin fast sheet and leave the body of the mass "
-    + "behind. All three rate-dependent models keep it thick. Among those, "
-    + "Cross and N = 1 hold everything above the toe and then avalanche; "
-    + "only N = 3.71 meters the delivery out, which is what the shallow "
-    + "slopes needed."));
+    + "behind. All three rate-dependent models move as a body, about "
+    + "twice as deep. Among those, the Cross model holds everything above "
+    + "the hinge and then avalanches, while both overstress models meter "
+    + "the delivery out &mdash; and at 30&deg; those two are hard to tell "
+    + "apart, which is the point: the exponent earns its margin at "
+    + "40&ndash;50&deg;, not here."));
   right.appendChild(el("p", "note",
     "States are <b>0.02 s</b> apart, so 1&times; plays at half real speed. "
     + "Dashed red is the <b>measured</b> deposit, so scrub to the end to "
     + "see what each run was aiming at."));
   right.appendChild(el("p", "note",
-    "The colour scale is <b>set per slope</b> &mdash; steeper chutes flow "
+    "The color scale is <b>set per slope</b> &mdash; steeper chutes flow "
     + "faster, and one scale for all seven would saturate every steep "
-    + "panel. Models at the same slope always share it, so compare colours "
+    + "panel. Models at the same slope always share it, so compare colors "
     + "across models freely, but read the number above before comparing "
     + "them across slopes."));
   right.appendChild(el("p", "note",
